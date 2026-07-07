@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Episode Manager — BBCode</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .app {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #30363d;
+        }
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #58a6ff, #f0883e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #21262d;
+            color: #c9d1d9;
+        }
+        .btn:hover {
+            background: #30363d;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        .btn-primary {
+            background: #238636;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #2ea043;
+        }
+        .btn-danger {
+            background: #da3633;
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: #f85149;
+        }
+        .btn-warning {
+            background: #d29922;
+            color: #fff;
+        }
+        .btn-warning:hover {
+            background: #e3b341;
+        }
+        .btn-cyan {
+            background: #1f6f8b;
+            color: #fff;
+        }
+        .btn-cyan:hover {
+            background: #2a8bb3;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #30363d;
+        }
+        .btn-outline:hover {
+            background: #21262d;
+        }
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        .btn-xs {
+            padding: 2px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            align-items: center;
+        }
+        .toolbar .sep {
+            width: 1px;
+            height: 28px;
+            background: #30363d;
+        }
+        .episode-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .episode-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 10px 14px;
+            transition: all 0.2s ease;
+            cursor: default;
+            position: relative;
+        }
+        .episode-item:hover {
+            border-color: #58a6ff55;
+        }
+        .episode-item.dragging {
+            opacity: 0.4;
+            border-color: #f0883e;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+        }
+        .episode-item.drag-over {
+            border-color: #f0883e;
+            box-shadow: 0 0 0 2px #f0883e66;
+        }
+        .episode-item.section-item {
+            border-left: 4px solid #8b949e;
+            background: #0d1117;
+        }
+        .episode-item.compact .episode-body,
+        .episode-item.compact .episode-actions {
+            display: none;
+        }
+        .episode-item.compact .episode-header {
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+        .episode-item.expanded .episode-body,
+        .episode-item.expanded .episode-actions {
+            display: flex;
+        }
+        .episode-item.expanded .episode-body {
+            flex-direction: column;
+            gap: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #30363d;
+            margin-top: 6px;
+        }
+        .episode-item.expanded .episode-actions {
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .episode-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .drag-handle {
+            cursor: grab;
+            color: #8b949e;
+            font-size: 18px;
+            user-select: none;
+            padding: 0 4px;
+        }
+        .drag-handle:hover {
+            color: #e6edf3;
+        }
+        .episode-index {
+            font-size: 12px;
+            color: #8b949e;
+            min-width: 28px;
+            font-weight: 500;
+        }
+        .episode-title-preview {
+            font-weight: 500;
+            font-size: 15px;
+            color: #e6edf3;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .episode-title-preview .section-badge {
+            color: #8b949e;
+            font-weight: 400;
+            margin-right: 6px;
+        }
+        .episode-status-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .status-btn {
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid #30363d;
+            background: transparent;
+            color: #8b949e;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .status-btn:hover {
+            background: #21262d;
+            color: #e6edf3;
+        }
+        .status-btn.active-restricted {
+            background: #da3633;
+            border-color: #da3633;
+            color: #fff;
+        }
+        .status-btn.active-processed {
+            background: #d29922;
+            border-color: #d29922;
+            color: #fff;
+        }
+        .status-btn.active-paused {
+            background: #1f6f8b;
+            border-color: #1f6f8b;
+            color: #fff;
+        }
+        .status-btn.active-completed {
+            background: #238636;
+            border-color: #238636;
+            color: #fff;
+        }
+        .status-btn.active-closed {
+            background: #6e40c9;
+            border-color: #6e40c9;
+            color: #fff;
+        }
+        .episode-body {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .episode-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .episode-row label {
+            font-size: 13px;
+            color: #8b949e;
+            min-width: 40px;
+            font-weight: 500;
+        }
+        .episode-row input[type="text"],
+        .episode-row input[type="url"] {
+            flex: 1;
+            min-width: 160px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: #e6edf3;
+            font-size: 14px;
+            transition: border 0.2s;
+        }
+        .episode-row input:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px #58a6ff33;
+        }
+        .participants-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            flex: 1;
+            min-width: 200px;
+        }
+        .participant-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 10px 2px 12px;
+            border-radius: 14px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            font-size: 13px;
+            color: #e6edf3;
+        }
+        .participant-tag .remove-participant {
+            cursor: pointer;
+            color: #8b949e;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0 2px;
+        }
+        .participant-tag .remove-participant:hover {
+            color: #f85149;
+        }
+        .participant-input-wrap {
+            position: relative;
+            flex: 1;
+            min-width: 120px;
+        }
+        .participant-input-wrap input {
+            width: 100%;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: #e6edf3;
+            font-size: 14px;
+        }
+        .participant-input-wrap input:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+        .autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            margin-top: 4px;
+            max-height: 160px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+        .autocomplete-list.show {
+            display: block;
+        }
+        .autocomplete-list .ac-item {
+            padding: 6px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #e6edf3;
+            transition: background 0.15s;
+        }
+        .autocomplete-list .ac-item:hover {
+            background: #21262d;
+        }
+        .autocomplete-list .ac-item .highlight {
+            color: #f0883e;
+            font-weight: 600;
+        }
+        .episode-actions {
+            display: none;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8b949e;
+        }
+        .empty-state .big-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        .empty-state h3 {
+            font-size: 20px;
+            color: #e6edf3;
+            margin-bottom: 8px;
+        }
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 16px;
+            padding: 28px 32px;
+            max-width: 640px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+        }
+        .modal h2 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #e6edf3;
+        }
+        .modal textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: #e6edf3;
+            font-size: 14px;
+            font-family: monospace;
+            resize: vertical;
+        }
+        .modal textarea:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+        .modal .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .modal .close-btn {
+            margin-left: auto;
+            background: transparent;
+            border: none;
+            color: #8b949e;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .modal .close-btn:hover {
+            color: #e6edf3;
+        }
+        .bbcode-output {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
+            color: #e6edf3;
+        }
+        .bbcode-output .label {
+            color: #8b949e;
+            font-size: 12px;
+            font-family: 'Segoe UI', sans-serif;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .copy-feedback {
+            font-size: 12px;
+            color: #3fb950;
+            margin-left: 8px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .copy-feedback.show {
+            opacity: 1;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d1117;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+        @media (max-width: 700px) {
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .header-actions {
+                justify-content: stretch;
+            }
+            .header-actions .btn {
+                flex: 1;
+                justify-content: center;
+            }
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .toolbar .sep {
+                display: none;
+            }
+            .modal {
+                padding: 20px 16px;
+            }
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #21262d;
+            color: #8b949e;
+        }
+        .badge-section {
+            background: #1f6f8b33;
+            color: #58a6ff;
+            border: 1px solid #1f6f8b55;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: #161b22;
+            border: 1px solid #30363d;
+            padding: 12px 24px;
+            border-radius: 10px;
+            color: #e6edf3;
+            font-size: 14px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transition: all 0.4s ease;
+            z-index: 2000;
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .char-manager {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            padding: 8px 12px;
+            background: #0d1117;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            margin-bottom: 12px;
+        }
+        .char-manager .char-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 10px 2px 12px;
+            border-radius: 14px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            font-size: 12px;
+            color: #e6edf3;
+        }
+        .char-manager .char-tag .remove-char {
+            cursor: pointer;
+            color: #8b949e;
+            font-size: 13px;
+            padding: 0 2px;
+        }
+        .char-manager .char-tag .remove-char:hover {
+            color: #f85149;
+        }
+        .char-manager input {
+            flex: 1;
+            min-width: 120px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: #e6edf3;
+            font-size: 13px;
+        }
+        .char-manager input:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+        .toggle-compact {
+            background: transparent;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 4px 12px;
+            color: #8b949e;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .toggle-compact.active {
+            border-color: #58a6ff;
+            color: #e6edf3;
+            background: #21262d;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app" id="app">
+        <div class="header">
+            <h1>📋 Episode Manager</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" id="exportBBCodeBtn">📤 Экспорт BBCode</button>
+                <button class="btn btn-cyan" id="openImportBtn">📥 Импорт</button>
+                <button class="btn btn-warning" id="exportSettingsBtn">💾 Экспорт</button>
+                <button class="btn btn-outline toggle-compact" id="compactToggle">📏 Компактный</button>
+            </div>
+        </div>
+
+        <div class="char-manager" id="charManager">
+            <span style="font-size:13px;color:#8b949e;font-weight:500;">👥 Персонажи:</span>
+            <div id="charTags" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+            <input type="text" id="charInput" placeholder="Добавить персонажа..." />
+            <button class="btn btn-primary btn-sm" id="addCharBtn">+</button>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn btn-primary" id="addEpisodeBtn">➕ Эпизод</button>
+            <button class="btn btn-cyan" id="addSectionBtn">📂 Раздел</button>
+            <div class="sep"></div>
+            <button class="btn btn-outline" id="openBulkBtn">📎 Быстрый импорт</button>
+            <div class="sep"></div>
+            <button class="btn btn-danger btn-sm" id="clearAllBtn">🗑 Очистить всё</button>
+        </div>
+
+        <div class="episode-list" id="episodeList"></div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="bulkModal">
+        <div class="modal">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <h2>📎 Быстрый импорт ссылок</h2>
+                <button class="close-btn" data-close="bulkModal">✕</button>
+            </div>
+            <p style="color:#8b949e;font-size:14px;margin-bottom:12px;">Вставьте ссылки по одной на строку.</p>
+            <textarea id="bulkInput" placeholder="https://example.com/episode1&#10;https://example.com/episode2"></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="bulkImportBtn">Импортировать</button>
+                <button class="btn btn-outline" data-close="bulkModal">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="importModal">
+        <div class="modal">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <h2 id="importModalTitle">📥 Импорт настроек</h2>
+                <button class="close-btn" data-close="importModal">✕</button>
+            </div>
+            <p id="importModalDesc" style="color:#8b949e;font-size:14px;margin-bottom:12px;">Вставьте зашифрованный код.</p>
+            <textarea id="importInput" placeholder="Вставьте код импорта..."></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="importActionBtn">Импортировать</button>
+                <button class="btn btn-outline" data-close="importModal">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="bbcodeModal">
+        <div class="modal" style="max-width:820px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <h2>📤 BBCode</h2>
+                <button class="close-btn" data-close="bbcodeModal">✕</button>
+            </div>
+            <div class="bbcode-output">
+                <span class="label">▼ Сгенерированный BBCode</span>
+                <pre id="bbcodeText" style="margin:0;white-space:pre-wrap;word-break:break-all;font-family:inherit;"></pre>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="copyBBCodeBtn">📋 Копировать</button>
+                <span class="copy-feedback" id="copyFeedback">✓ Скопировано!</span>
+                <button class="btn btn-outline" data-close="bbcodeModal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ─── DATA ──────────────────────────────────────────────────────────────
+        let episodes = [];
+        let characters = [];
+        let nextId = 1;
+        let dragState = null;
+        let compactMode = false;
+
+        // ─── STORAGE ──────────────────────────────────────────────────────────
+        function loadData() {
+            try {
+                const raw = localStorage.getItem('episodeManagerData');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    episodes = parsed.episodes || [];
+                    characters = parsed.characters || [];
+                    nextId = parsed.nextId || 1;
+                    episodes.forEach(e => {
+                        if (!e.id) e.id = nextId++;
+                        if (!e.statuses) e.statuses = [];
+                        if (e.status && !e.statuses.includes(e.status)) {
+                            e.statuses.push(e.status);
+                        }
+                        delete e.status;
+                        if (!e.type && !e.sectionTitle) e.type = 'episode';
+                        if (e.sectionTitle) e.type = 'section';
+                    });
+                }
+            } catch (_) { /* ignore */ }
+            if (characters.length === 0) {
+                characters = ['Алиса', 'Боб', 'Кэрол', 'Дэйв', 'Ева'];
+            }
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('episodeManagerData', JSON.stringify({
+                    episodes,
+                    characters,
+                    nextId
+                }));
+            } catch (_) { /* ignore */ }
+        }
+
+        // ─── RENDER ──────────────────────────────────────────────────────────
+        function render() {
+            const list = document.getElementById('episodeList');
+            if (episodes.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="big-icon">📭</div>
+                        <h3>Нет эпизодов</h3>
+                        <p style="color:#8b949e;">Добавьте первый эпизод или раздел.</p>
+                    </div>
+                `;
+                renderCharacters();
+                saveData();
+                return;
+            }
+
+            let html = '';
+            episodes.forEach((ep, idx) => {
+                const isSection = ep.type === 'section' || !!ep.sectionTitle;
+                if (isSection) {
+                    html += renderSection(ep, idx);
+                } else {
+                    html += renderEpisode(ep, idx);
+                }
+            });
+            list.innerHTML = html;
+            renderCharacters();
+            saveData();
+
+            // Apply compact mode
+            document.querySelectorAll('.episode-item').forEach(el => {
+                if (compactMode) {
+                    el.classList.add('compact');
+                    el.classList.remove('expanded');
+                } else {
+                    el.classList.remove('compact');
+                    el.classList.add('expanded');
+                }
+            });
+            document.getElementById('compactToggle').classList.toggle('active', compactMode);
+        }
+
+        function renderEpisode(ep, idx) {
+            const statuses = ['restricted', 'processed', 'paused', 'completed', 'closed'];
+            const labels = {
+                restricted: '🔴 Restricted',
+                processed: '🟡 Processed',
+                paused: '🔵 Paused',
+                completed: '🟢 Completed',
+                closed: '🟣 Closed'
+            };
+            const active = ep.statuses || [];
+            const statusButtons = statuses.map(s =>
+                `<button class="status-btn ${active.includes(s) ? 'active-'+s : ''}" data-ep="${ep.id}" data-status="${s}">${labels[s]}</button>`
+            ).join('');
+
+            const participantsHtml = (ep.participants || []).map(p =>
+                `<span class="participant-tag">${escHtml(p)}<span class="remove-participant" data-ep="${ep.id}" data-name="${escHtml(p)}">✕</span></span>`
+            ).join('');
+
+            const title = ep.title || 'Без названия';
+            const url = ep.url || '';
+
+            return `
+                <div class="episode-item compact expanded" draggable="true" data-id="${ep.id}" data-index="${idx}">
+                    <div class="episode-header">
+                        <span class="drag-handle" title="Перетащите">⠿</span>
+                        <span class="episode-index">#${idx+1}</span>
+                        <span class="episode-title-preview">${escHtml(title)}</span>
+                        <div class="episode-status-group">${statusButtons}</div>
+                    </div>
+                    <div class="episode-body">
+                        <div class="episode-row">
+                            <label>Название</label>
+                            <input type="text" value="${escHtml(title)}" placeholder="Название" data-ep="${ep.id}" data-field="title" />
+                        </div>
+                        <div class="episode-row">
+                            <label>Ссылка</label>
+                            <input type="url" value="${escHtml(url)}" placeholder="https://..." data-ep="${ep.id}" data-field="url" />
+                        </div>
+                        <div class="episode-row">
+                            <label>Участники</label>
+                            <div class="participants-wrap">
+                                ${participantsHtml}
+                                <div class="participant-input-wrap">
+                                    <input type="text" placeholder="Добавить участника..." data-ep-id="${ep.id}" />
+                                    <div class="autocomplete-list" data-ep-id="${ep.id}"></div>
+                                </div>
+                                <button class="btn btn-primary btn-xs add-participant-btn" data-ep="${ep.id}">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="episode-actions">
+                        <button class="btn btn-danger btn-sm delete-episode-btn" data-ep="${ep.id}">🗑 Удалить</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSection(ep, idx) {
+            const title = ep.sectionTitle || 'Без названия';
+            return `
+                <div class="episode-item section-item compact expanded" draggable="true" data-id="${ep.id}" data-index="${idx}">
+                    <div class="episode-header">
+                        <span class="drag-handle" title="Перетащите">⠿</span>
+                        <span class="episode-index">#${idx+1}</span>
+                        <span class="episode-title-preview"><span class="section-badge">📂</span> ${escHtml(title)}</span>
+                    </div>
+                    <div class="episode-body">
+                        <div class="episode-row">
+                            <label>Название раздела</label>
+                            <input type="text" value="${escHtml(title)}" placeholder="Название раздела" data-ep="${ep.id}" data-field="sectionTitle" />
+                        </div>
+                    </div>
+                    <div class="episode-actions">
+                        <button class="btn btn-danger btn-sm delete-episode-btn" data-ep="${ep.id}">🗑 Удалить</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCharacters() {
+            const container = document.getElementById('charTags');
+            if (!container) return;
+            if (characters.length === 0) {
+                container.innerHTML = '<span style="color:#484f58;font-size:13px;">(нет персонажей)</span>';
+                return;
+            }
+            container.innerHTML = characters.map(c =>
+                `<span class="char-tag">${escHtml(c)}<span class="remove-char" data-name="${escHtml(c)}">✕</span></span>`
+            ).join('');
+        }
+
+        // ─── CRUD OPERATIONS ──────────────────────────────────────────────
+        function addEpisode(title = '', url = '', participants = []) {
+            const ep = {
+                id: nextId++,
+                type: 'episode',
+                title: title || `Эпизод ${episodes.length+1}`,
+                url: url || '',
+                participants: participants.slice(),
+                statuses: [],
+            };
+            episodes.push(ep);
+            render();
+            showToast('➕ Эпизод добавлен');
+        }
+
+        function addSection(title = 'Новый раздел') {
+            const ep = {
+                id: nextId++,
+                type: 'section',
+                sectionTitle: title,
+            };
+            episodes.push(ep);
+            render();
+            showToast('📂 Раздел добавлен');
+        }
+
+        function deleteEpisode(id) {
+            if (!confirm('Удалить этот элемент?')) return;
+            episodes = episodes.filter(e => e.id !== id);
+            render();
+            showToast('🗑 Удалено');
+        }
+
+        function updateField(id, field, value) {
+            const ep = episodes.find(e => e.id === id);
+            if (!ep) return;
+            ep[field] = value;
+            saveData();
+        }
+
+        function toggleStatus(id, status) {
+            const ep = episodes.find(e => e.id === id);
+            if (!ep) return;
+            if (!ep.statuses) ep.statuses = [];
+            const idx = ep.statuses.indexOf(status);
+            if (idx > -1) ep.statuses.splice(idx, 1);
+            else ep.statuses.push(status);
+            render();
+        }
+
+        function addParticipant(epId, name) {
+            const ep = episodes.find(e => e.id === epId);
+            if (!ep) return;
+            name = name.trim();
+            if (!name) return;
+            if (!ep.participants) ep.participants = [];
+            if (ep.participants.includes(name)) {
+                showToast('⚠️ Участник уже добавлен');
+                return;
+            }
+            ep.participants.push(name);
+            if (!characters.includes(name)) {
+                characters.push(name);
+            }
+            render();
+            saveData();
+        }
+
+        function removeParticipant(epId, name) {
+            const ep = episodes.find(e => e.id === epId);
+            if (!ep) return;
+            ep.participants = (ep.participants || []).filter(p => p !== name);
+            render();
+            saveData();
+        }
+
+        function removeCharacter(name) {
+            if (!confirm(`Удалить персонажа "${name}"?`)) return;
+            characters = characters.filter(c => c !== name);
+            episodes.forEach(ep => {
+                if (ep.participants) {
+                    ep.participants = ep.participants.filter(p => p !== name);
+                }
+            });
+            render();
+            saveData();
+            showToast('👤 Персонаж удалён');
+        }
+
+        function clearAll() {
+            if (!confirm('Удалить все эпизоды и разделы?')) return;
+            episodes = [];
+            render();
+            saveData();
+            showToast('🗑 Всё очищено');
+        }
+
+        // ─── PARTICIPANT AUTOCOMPLETE ────────────────────────────────────
+        function handleParticipantInput(input) {
+            const epId = parseInt(input.dataset.epId);
+            const val = input.value.trim().toLowerCase();
+            const list = document.querySelector(`.autocomplete-list[data-ep-id="${epId}"]`);
+            if (!list) return;
+            if (!val) {
+                list.classList.remove('show');
+                return;
+            }
+            const matches = characters.filter(c => c.toLowerCase().includes(val));
+            if (matches.length === 0) {
+                list.classList.remove('show');
+                return;
+            }
+            list.innerHTML = matches.map(c => {
+                const idx = c.toLowerCase().indexOf(val);
+                const before = c.slice(0, idx);
+                const highlight = c.slice(idx, idx + val.length);
+                const after = c.slice(idx + val.length);
+                return `<div class="ac-item" data-ep="${epId}" data-name="${escHtml(c)}">${escHtml(before)}<span class="highlight">${escHtml(highlight)}</span>${escHtml(after)}</div>`;
+            }).join('');
+            list.classList.add('show');
+        }
+
+        function selectParticipant(epId, name) {
+            addParticipant(epId, name);
+            const input = document.querySelector(`.participant-input-wrap input[data-ep-id="${epId}"]`);
+            if (input) input.value = '';
+            closeAutocomplete(epId);
+        }
+
+        function closeAutocomplete(epId) {
+            const list = document.querySelector(`.autocomplete-list[data-ep-id="${epId}"]`);
+            if (list) list.classList.remove('show');
+        }
+
+        // ─── DRAG & DROP ──────────────────────────────────────────────────
+        function setupDragDrop() {
+            const list = document.getElementById('episodeList');
+            list.addEventListener('dragstart', (e) => {
+                const item = e.target.closest('.episode-item');
+                if (!item) return;
+                const id = parseInt(item.dataset.id);
+                dragState = { id, fromIndex: episodes.findIndex(e => e.id === id) };
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', String(id));
+            });
+            list.addEventListener('dragend', (e) => {
+                const item = e.target.closest('.episode-item');
+                if (item) item.classList.remove('dragging');
+                document.querySelectorAll('.episode-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+                dragState = null;
+            });
+            list.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                const target = e.target.closest('.episode-item');
+                document.querySelectorAll('.episode-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+                if (target) target.classList.add('drag-over');
+            });
+            list.addEventListener('dragleave', (e) => {
+                const target = e.target.closest('.episode-item');
+                if (target) target.classList.remove('drag-over');
+            });
+            list.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const target = e.target.closest('.episode-item');
+                if (!target) return;
+                document.querySelectorAll('.episode-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+                const toId = parseInt(target.dataset.id);
+                if (!dragState || dragState.id === toId) return;
+                const fromIdx = dragState.fromIndex;
+                const toIdx = episodes.findIndex(e => e.id === toId);
+                if (fromIdx === -1 || toIdx === -1) return;
+                const [moved] = episodes.splice(fromIdx, 1);
+                episodes.splice(toIdx, 0, moved);
+                render();
+                saveData();
+                showToast('↕ Порядок обновлён');
+                dragState = null;
+            });
+        }
+
+        // ─── BULK IMPORT ──────────────────────────────────────────────────
+        function importBulk() {
+            const text = document.getElementById('bulkInput').value;
+            const lines = text.split('\n').map(s => s.trim()).filter(s => s);
+            if (lines.length === 0) {
+                showToast('⚠️ Нет ссылок для импорта');
+                return;
+            }
+            let count = 0;
+            lines.forEach(line => {
+                if (line.startsWith('http://') || line.startsWith('https://')) {
+                    addEpisode(`Эпизод ${episodes.length+1}`, line, []);
+                } else {
+                    addEpisode(line, '', []);
+                }
+                count++;
+            });
+            closeModal('bulkModal');
+            showToast(`📎 Импортировано ${count} эпизодов`);
+        }
+
+        // ─── BBCode EXPORT ──────────────────────────────────────────────
+        function exportBBCode() {
+            let result = [];
+            episodes.forEach(ep => {
+                if (ep.type === 'section' || ep.sectionTitle) {
+                    const title = ep.sectionTitle || 'Раздел';
+                    result.push(`[align=center][size=12][color=silver]${title}[/color][/size][/align]`);
+                } else {
+                    const statuses = ['restricted', 'processed', 'paused', 'completed', 'closed'];
+                    const active = ep.statuses || [];
+                    const statusStr = statuses.map(s => active.includes(s) ? `[${s}]` : '').filter(Boolean).join('/');
+                    const title = ep.title || 'Без названия';
+                    const url = ep.url || '#';
+                    const participants = (ep.participants || []).length ? (ep.participants || []).join(' & ') : '—';
+                    let block = `[blocklink]`;
+                    if (statusStr) block += ` ${statusStr}`;
+                    block += `[url=${url}]${title}[/url] [linkcaption]${participants}[/linkcaption][/blocklink]`;
+                    result.push(block);
+                }
+            });
+            document.getElementById('bbcodeText').textContent = result.join('\n');
+            document.getElementById('copyFeedback').classList.remove('show');
+            openModal('bbcodeModal');
+        }
+
+        function copyBBCode() {
+            const text = document.getElementById('bbcodeText').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                document.getElementById('copyFeedback').classList.add('show');
+                setTimeout(() => document.getElementById('copyFeedback').classList.remove('show'), 2000);
+                showToast('📋 BBCode скопирован!');
+            }).catch(() => {
+                const area = document.createElement('textarea');
+                area.value = text;
+                document.body.appendChild(area);
+                area.select();
+                document.execCommand('copy');
+                area.remove();
+                showToast('📋 BBCode скопирован!');
+            });
+        }
+
+        // ─── SETTINGS IMPORT / EXPORT ──────────────────────────────────
+        function exportSettings() {
+            const data = { episodes, characters, nextId };
+            const json = JSON.stringify(data);
+            const encoded = btoa(unescape(encodeURIComponent(json)));
+            document.getElementById('importInput').value = encoded;
+            document.getElementById('importModalTitle').textContent = '📤 Экспорт настроек';
+            document.getElementById('importModalDesc').textContent = 'Скопируйте этот зашифрованный код для импорта.';
+            const btn = document.getElementById('importActionBtn');
+            btn.textContent = '📋 Копировать код';
+            btn.onclick = () => {
+                const code = document.getElementById('importInput').value;
+                navigator.clipboard.writeText(code).then(() => showToast('📋 Код скопирован!'))
+                    .catch(() => {
+                        const area = document.createElement('textarea');
+                        area.value = code;
+                        document.body.appendChild(area);
+                        area.select();
+                        document.execCommand('copy');
+                        area.remove();
+                        showToast('📋 Код скопирован!');
+                    });
+            };
+            openModal('importModal');
+        }
+
+        function resetImportModal() {
+            document.getElementById('importModalTitle').textContent = '📥 Импорт настроек';
+            document.getElementById('importModalDesc').textContent = 'Вставьте зашифрованный код, полученный при экспорте.';
+            const btn = document.getElementById('importActionBtn');
+            btn.textContent = 'Импортировать';
+            btn.onclick = importSettings;
+            document.getElementById('importInput').value = '';
+        }
+
+        function importSettings() {
+            const code = document.getElementById('importInput').value.trim();
+            if (!code) {
+                showToast('⚠️ Введите код для импорта');
+                return;
+            }
+            try {
+                const json = decodeURIComponent(escape(atob(code)));
+                const data = JSON.parse(json);
+                if (!data.episodes || !data.characters) {
+                    showToast('⚠️ Неверный формат данных');
+                    return;
+                }
+                if (!confirm('Импорт заменит все текущие данные. Продолжить?')) return;
+                episodes = data.episodes || [];
+                characters = data.characters || [];
+                nextId = data.nextId || 1;
+                episodes.forEach(e => {
+                    if (!e.id) e.id = nextId++;
+                    if (!e.statuses) e.statuses = [];
+                    if (e.status && !e.statuses.includes(e.status)) e.statuses.push(e.status);
+                    delete e.status;
+                    if (!e.type && !e.sectionTitle) e.type = 'episode';
+                    if (e.sectionTitle) e.type = 'section';
+                });
+                render();
+                saveData();
+                closeModal('importModal');
+                showToast('✅ Настройки импортированы!');
+            } catch (e) {
+                showToast('⚠️ Ошибка при импорте: неверный код');
+                console.error(e);
+            }
+        }
+
+        // ─── MODALS ──────────────────────────────────────────────────────
+        function openModal(id) {
+            document.getElementById(id).classList.add('open');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('open');
+        }
+
+        // ─── TOAST ──────────────────────────────────────────────────────
+        let toastTimeout = null;
+
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => el.classList.remove('show'), 2500);
+        }
+
+        // ─── UTILITY ────────────────────────────────────────────────────
+        function escHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // ─── EVENT DELEGATION ──────────────────────────────────────────
+        function setupDelegation() {
+            // Episode list events
+            const list = document.getElementById('episodeList');
+
+            // Delete episode
+            list.addEventListener('click', (e) => {
+                const btn = e.target.closest('.delete-episode-btn');
+                if (btn) {
+                    const id = parseInt(btn.dataset.ep);
+                    deleteEpisode(id);
+                    return;
+                }
+            });
+
+            // Toggle status
+            list.addEventListener('click', (e) => {
+                const btn = e.target.closest('.status-btn');
+                if (btn) {
+                    const id = parseInt(btn.dataset.ep);
+                    const status = btn.dataset.status;
+                    toggleStatus(id, status);
+                    return;
+                }
+            });
+
+            // Add participant from button
+            list.addEventListener('click', (e) => {
+                const btn = e.target.closest('.add-participant-btn');
+                if (btn) {
+                    const epId = parseInt(btn.dataset.ep);
+                    const input = document.querySelector(`.participant-input-wrap input[data-ep-id="${epId}"]`);
+                    if (input) {
+                        const val = input.value.trim();
+                        if (val) {
+                            addParticipant(epId, val);
+                            input.value = '';
+                            closeAutocomplete(epId);
+                        }
+                    }
+                    return;
+                }
+            });
+
+            // Remove participant
+            list.addEventListener('click', (e) => {
+                const el = e.target.closest('.remove-participant');
+                if (el) {
+                    const epId = parseInt(el.dataset.ep);
+                    const name = el.dataset.name;
+                    removeParticipant(epId, name);
+                    return;
+                }
+            });
+
+            // Participant input events (keydown and input)
+            list.addEventListener('input', (e) => {
+                const input = e.target.closest('.participant-input-wrap input');
+                if (input) {
+                    handleParticipantInput(input);
+                }
+            });
+
+            list.addEventListener('keydown', (e) => {
+                const input = e.target.closest('.participant-input-wrap input');
+                if (!input) return;
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const epId = parseInt(input.dataset.epId);
+                    const val = input.value.trim();
+                    if (val) {
+                        addParticipant(epId, val);
+                        input.value = '';
+                        closeAutocomplete(epId);
+                    }
+                }
+                if (e.key === 'Escape') {
+                    const epId = parseInt(input.dataset.epId);
+                    closeAutocomplete(epId);
+                }
+            });
+
+            // Autocomplete item click
+            list.addEventListener('click', (e) => {
+                const item = e.target.closest('.ac-item');
+                if (item) {
+                    const epId = parseInt(item.dataset.ep);
+                    const name = item.dataset.name;
+                    selectParticipant(epId, name);
+                }
+            });
+
+            // Update field (input change)
+            list.addEventListener('change', (e) => {
+                const input = e.target.closest('input[data-ep][data-field]');
+                if (input) {
+                    const id = parseInt(input.dataset.ep);
+                    const field = input.dataset.field;
+                    updateField(id, field, input.value);
+                }
+            });
+
+            // Character manager events
+            const charManager = document.getElementById('charManager');
+            charManager.addEventListener('click', (e) => {
+                const el = e.target.closest('.remove-char');
+                if (el) {
+                    const name = el.dataset.name;
+                    removeCharacter(name);
+                }
+            });
+
+            // Add character button
+            document.getElementById('addCharBtn').addEventListener('click', addCharacter);
+            document.getElementById('charInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCharacter();
+                }
+            });
+
+            // Top toolbar buttons
+            document.getElementById('addEpisodeBtn').addEventListener('click', () => addEpisode());
+            document.getElementById('addSectionBtn').addEventListener('click', () => addSection());
+            document.getElementById('clearAllBtn').addEventListener('click', clearAll);
+            document.getElementById('openBulkBtn').addEventListener('click', () => {
+                document.getElementById('bulkInput').value = '';
+                openModal('bulkModal');
+            });
+            document.getElementById('bulkImportBtn').addEventListener('click', importBulk);
+
+            // Export / Import
+            document.getElementById('exportBBCodeBtn').addEventListener('click', exportBBCode);
+            document.getElementById('exportSettingsBtn').addEventListener('click', exportSettings);
+            document.getElementById('openImportBtn').addEventListener('click', () => {
+                resetImportModal();
+                openModal('importModal');
+            });
+            document.getElementById('copyBBCodeBtn').addEventListener('click', copyBBCode);
+
+            // Compact toggle
+            document.getElementById('compactToggle').addEventListener('click', () => {
+                compactMode = !compactMode;
+                render();
+                showToast(compactMode ? '📏 Компактный режим' : '📏 Полный режим');
+            });
+
+            // Modal close buttons
+            document.querySelectorAll('[data-close]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.close;
+                    if (id === 'importModal') resetImportModal();
+                    closeModal(id);
+                });
+            });
+
+            // Click overlay to close
+            document.querySelectorAll('.modal-overlay').forEach(overlay => {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        const id = overlay.id;
+                        if (id === 'importModal') resetImportModal();
+                        closeModal(id);
+                    }
+                });
+            });
+
+            // Expand/collapse in compact mode
+            list.addEventListener('click', (e) => {
+                if (!compactMode) return;
+                const item = e.target.closest('.episode-item');
+                if (!item) return;
+                // Ignore clicks on interactive elements
+                if (e.target.closest('.status-btn') || e.target.closest('.drag-handle') ||
+                    e.target.closest('.btn') || e.target.closest('input') ||
+                    e.target.closest('.participant-tag') || e.target.closest('.remove-participant') ||
+                    e.target.closest('.ac-item')) {
+                    return;
+                }
+                item.classList.toggle('expanded');
+                const body = item.querySelector('.episode-body');
+                const actions = item.querySelector('.episode-actions');
+                if (item.classList.contains('expanded')) {
+                    if (body) body.style.display = 'flex';
+                    if (actions) actions.style.display = 'flex';
+                } else {
+                    if (body) body.style.display = '';
+                    if (actions) actions.style.display = '';
+                }
+            });
+        }
+
+        // ─── ADD CHARACTER ──────────────────────────────────────────────
+        function addCharacter() {
+            const input = document.getElementById('charInput');
+            const val = input.value.trim();
+            if (!val) return;
+            if (characters.includes(val)) {
+                showToast('⚠️ Персонаж уже существует');
+                return;
+            }
+            characters.push(val);
+            input.value = '';
+            render();
+            saveData();
+            showToast('👤 Персонаж добавлен');
+        }
+
+        // ─── INIT ──────────────────────────────────────────────────────
+        loadData();
+        render();
+        setupDragDrop();
+        setupDelegation();
+
+        // Close autocomplete on outside click
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.participant-input-wrap')) {
+                document.querySelectorAll('.autocomplete-list.show').forEach(el => el.classList.remove('show'));
+            }
+        });
+
+        console.log('📋 Episode Manager loaded. Characters:', characters.length, 'Episodes:', episodes.length);
+    </script>
+</body>
+</html>
